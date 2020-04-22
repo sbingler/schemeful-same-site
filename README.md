@@ -19,7 +19,9 @@ Part of this effort will be to update [Incrementally Better Cookies](https://too
 To protect users from CSRF attacks on secure origins which are carried out by insecure origins with the same domain.
 
 ## Non-Goals
-This proposal does not address [weak confidentiality](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-8.5) or [weak integrity](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-8.6) of cookies, specifically in the context of scheme isolation. This means that both secure and insecure origins will retain access to the same set of cookies. I.e., if http://site.example sets a cookie then https://site.example can still read that cookie.
+This proposal does not address [weak confidentiality](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-8.5) or [weak integrity](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-8.6) of cookies, specifically in the context of scheme isolation. This means that both secure and insecure origins will retain access to the same set of cookies. I.e., if a user visits http://site.example and it sets a cookie then when that user then visits https://site.example the site can still read that same cookie.
+
+[Scheme-Bound Cookies](https://github.com/mikewest/scheming-cookies) is a proposal aiming to address this issue.
 
 ## Recommended Action
 Affected sites are encouraged to fully migrate to HTTPS.
