@@ -13,7 +13,7 @@ The web ecosystem is already moving in this direction with the [HTML spec](https
 ## Proposal
 Modify SameSite’s implementation in the user agent to consider origins with different schemes as cross-site. Thus https://site.example and http://site.example would now be considered cross-site.
 
-Part of this effort will be to update [Incrementally Better Cookies](https://tools.ietf.org/html/draft-west-cookie-incrementalism-00) to match the intended behavior.
+[Incrementally Better Cookies](https://tools.ietf.org/html/draft-west-cookie-incrementalism-01) has been updated to reflect this proposal.
 
 ## Goal
 To protect users from CSRF attacks on secure origins which are carried out by insecure origins with the same domain.
@@ -51,27 +51,28 @@ For example, if http://site.example embeds an image from https://site.example, S
 ## Questions
 ### How do Schemeful Same-Site and Scheme-Bound Cookies differ?
 
-"Schemeful Same-Site" and "[Scheme-Bound Cookies](https://github.com/mikewest/scheming-cookies)" are both trying to move cookies closer to an origin based security model; these two proposals complement one another and one is not a subset of the other.
+"Schemeful Same-Site" and "[Scheme-Bound Cookies](https://github.com/mikewest/scheming-cookies)" are both trying to move cookies closer to an origin-based security model; these two proposals complement one another and one is not a subset of the other.
 
 #### Schemeful Same-Site
-"Schemeful Same-Site", and the current version of same-site, is concerned with the browsing context in which the cookie will be sent or recieved. The browsing context can be thought of as the answer to the question "Is the request/response url the same site as the one I'm on?" More specifically "Is the request/response url 'same-site' or 'cross-site' with the current site I'm on?" 
+"Schemeful Same-Site", and the current version of same-site, is concerned with the browsing context in which the cookie will be sent or received. The browsing context can be thought of as the answer to the question "Is the request URL the same site as the one I'm on?" More specifically "Is the request URL 'same-site' or 'cross-site' with the current site I'm on?" 
+"The site I'm on" is generally the one shown in the browser's address bar (there are, of course, exceptions but they're not important to illustrate the point).
 
 In the current world the browser context is determined by checking the registrable domain: http://site1.example is *not* same-site with http://site2.example, but http://site1.example and https://site1.example would be same-site.
 With "Schemeful Same-Site" we now consider the scheme along with the registrable domain: http://site1.example is cross-site, not same-site, with http://site2.example, http://site1.example is also cross-site with https://site1.example, but https://site1.example is same-site with https://site1.example. 
 
 #### Scheme-Bound Cookies
-"Scheme-Bound Cookies" is concerend with the connection overwhich a cookie is being sent or set.
+"Scheme-Bound Cookies" is concerned with the scheme of the URL a cookie is being sent to or set by.
 In the current world a response from https://site.example/resource.jpg could set a cookie: `Set-Cookie: mycookie=value`.
-That cookie can then be sent to any url with "site.example" as the host regardless of scheme: http://site.example/otherresource.jpg, https://site.example/somethingelse.jpg, etc.
+That cookie can then be sent to any URL with "site.example" as the host regardless of the scheme: http://site.example/otherresource.jpg, https://site.example/somethingelse.jpg, etc.
 
-With "Scheme-Bound Cookies" the browser will no longer send the cookie to a different scheme than the one that set it.
+With "Scheme-Bound Cookies" the browser will no longer send the cookie to a different schemes than the one that set it.
 With that in mind: a response from https://site.example/resource.jpg sets a cookie: `Set-Cookie: mycookie=value`. 
-That cookie now can **only** be sent to https://site.example urls. This includes cases where a different site, http://other.example, embedded resources from site.example: http://site.example/otherresource.jpg will **not** get sent the cookie, https://site.example/somethingelse.jpg will get sent the cookie.
+That cookie now can **only** be sent to secure URLs: https://site.example. This includes cases where a different site, http://other.example, embeds resources from site.example: http://site.example/otherresource.jpg will **not** get sent the cookie, https://site.example/somethingelse.jpg will get sent the cookie.
 
 #### TL;DR
-"Schemeful Same-Site" affects the browsing context cookies will be sent/set in. "Is this url the same site as the one I'm on if I consider the schemes?"
+"Schemeful Same-Site" affects the browsing context cookies will be sent/set in. "Is this URL the same site as the one I'm on if I consider the schemes?"
 
-“Scheme-Bound Cookies” affects the connections the cookies will be sent on. "Does the scheme of the request url match the scheme of the original response url that set this cookie?"
+“Scheme-Bound Cookies” affects the types of schemes the cookies will be sent to. "Does the scheme of the request URL match the scheme of the original, response, URL that set this cookie?"
 
 ### Example
 This example showcases that it's possible to have a situation in which the cookies that "Schemeful Same-Site" and "Scheme-Bound Cookies" each send can differ.
@@ -88,15 +89,15 @@ This example showcases that it's possible to have a situation in which the cooki
 
    * “Schemeful Same-Site” would also allow this cookie to be sent as we're still in a same-site context when considering scheme: the user is on http://website.example and the cookie wants to be sent to http://website.example
 
-   * “Scheme-Bound Cookies” would not allow this cookie to be sent as the connection isn't the same as the one the cookie was set by: the cookie was set on https and is trying to be sent on http.
+   * “Scheme-Bound Cookies” would not allow this cookie to be sent as the scheme isn't the same as the one the cookie was set by: the cookie was set by https and is trying to be sent to http.
 
-4. Immediately after the browser checks to see if it can send the cookie to https://website.example/readsacookie2.jpg
+4. Next the browser checks to see if it can send the cookie to https://website.example/readsacookie2.jpg
 
    * In the current world the cookie is allowed to be sent as this is a same-site context: the registrable domains match.
 
    * “Schemeful Same-Site” would not allow this cookie to be sent as we're now in a cross-site context: the user is on http://website.example and the cookie wants to be sent to https://website.example.
 
-   * “Scheme-Bound Cookies” would allow this cookie to be sent as the connection is the same as the one the cookie was set by: the cookie was set on https and is trying to be sent on https.
+   * “Scheme-Bound Cookies” would allow this cookie to be sent as the scheme is the same as the one the cookie was set by: the cookie was set by https and is trying to be sent to https.
 
 5. Finally the user navigates to a different website, https://othersite.example, which embeddeds https://website.example/readsacookie2.jpg
 
@@ -104,7 +105,4 @@ This example showcases that it's possible to have a situation in which the cooki
    
    * “Schemeful Same-Site” would not allow this cookie to be sent as this is a cross-site context: the registrable domains don't match.
    
-   * "Scheme-Bound Cookies" would allow this cookie to be sent the connection is the same as the one the cookie was set by: the cookie was set on https and is trying to be sent on https.
-
-
-
+   * "Scheme-Bound Cookies" would allow this cookie to be sent as the scheme is the same as the one the cookie was set by: the cookie was set by https and is trying to be sent to https. (It's important to note that even if "Scheme-Bound Cookies" allows this cookie to be sent it will still ultimately be blocked by the browser due to same-site.)
