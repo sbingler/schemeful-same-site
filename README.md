@@ -6,12 +6,26 @@
 * kaustubhag@chromium.org
 
 ## Introduction
-The [SameSite](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-8.8) cookie attribute is designed to defend against CSRF attacks but currently does not take the scheme of the site into account. This was [originally to assist sites during their transition to https](https://github.com/w3c/webappsec-fetch-metadata/issues/34#issuecomment-527338651), however it results in the secure and insecure versions of the same host being considered same-site. A network attacker could thus impersonate http://site.example and use it to bypass SameSite protections on https://site.example. Between this security flaw and [HTTPS usage markedly increasing](https://transparencyreport.google.com/https/overview), we believe it is time to change this definition.
+The [SameSite](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-8.8) cookie attribute is designed to defend against CSRF attacks but currently does not take the scheme of the site into account. This was [originally to assist sites during their transition to https](https://github.com/w3c/webappsec-fetch-metadata/issues/34#issuecomment-527338651), however it results in the secure and insecure versions of the same host being considered same-site. A network attacker could thus impersonate http://site.example and use it to bypass `SameSite` protections on https://site.example. Between this security flaw and [HTTPS usage markedly increasing](https://transparencyreport.google.com/https/overview), we believe it is time to change this definition.
 
 The web ecosystem is already moving in this direction with the [HTML spec](https://html.spec.whatwg.org/multipage/origin.html#same-site) having been updated with the new definition of same site and the in-progress W3C PING [Privacy Threat Model](https://w3cping.github.io/privacy-threat-model/#terminology) utilizing it.
 
+### Example Attacks and Mitigations
+Below are two scenerios: the first one illustrates how the `SameSite` cookie attribute (specifically `Strict` in this example) can protect against CSRF, the second illustrates how "Schemeful Same-Site" enhances that protection.
+#### A Cross-Domain CSRF Attack
+An attacker sends you an email claiming you've won a sweepstakes. All you need to do if visit a website and click a button. You decide this feels legitimate and go visit the site https://mega-sweepstakes.example. The site has a big attractive button urging you to click it but, unbeknownst to you, the button doesn't claim your prize. Instead it links to your bank along with a query parameter telling your bank to transfer your money to the attacker's account: https://bank.example/transfer/custom?from=checking&to=evil-inc-slush-fund&amt=1000. 
+
+If your bank's cookies don't have the `SameSite=Strict` attribute then clicking that link will cause your browser to navigate to your bank's site, send along your login cookies, and cause you to be $1000 poorer.
+
+If your bank's cookies **do** have the `SameSite=Strict` attribute then clicking that link will **not** cause your browser to send along your login cookies, because mega-sweepstakes.example isn't the same site as bank.example, and your checking account is safe.
+
+#### A Same-Domain CSRF Attack
+But what if the attacker is Man-in-the-middling your connection? If you decide to visit http://bank.example the attacker could modify every link to instead be https://bank.example/transfer/custom?from=checking&to=evil-inc-slush-fund&amt=1000. Even `SameSite=Strict` wouldn't protect you as bank.example and bank.example are same-site.
+
+Enter "Schemeful Same-Site", by considering both the scheme and the registrable domain we can see that http://bank.example and https://bank.example are not the same and hence are not same-site. This means that the browser will not send `SameSite=Strict` cookies.
+
 ## Proposal
-Modify SameSite’s implementation in the user agent to consider origins with different schemes as cross-site. Thus https://site.example and http://site.example would now be considered cross-site.
+Modify same-site's implementation in the user agent to consider origins with different schemes as cross-site. Thus https://site.example and http://site.example would now be considered cross-site.
 
 [Incrementally Better Cookies](https://tools.ietf.org/html/draft-west-cookie-incrementalism-01) has been updated to reflect this proposal.
 
@@ -29,24 +43,24 @@ Affected sites are encouraged to fully migrate to HTTPS.
 ## Changed Behavior
 “Cross-scheme” in this context means origins which are [schemelessly](https://html.spec.whatwg.org/multipage/origin.html#schemelessly-same-site) same-site but have differing schemes. E.g., http://site.example and https://site.example are considered cross-scheme.
 
-* SameSite=Lax and SameSite=Strict cookies will no longer be sent in cross-scheme subresource requests, i.e. http-to-https and https-to-http (mixed content), regardless of HTTP request method.
-* SameSite=Lax and SameSite=Strict cookies can no longer be set by a cross-scheme subresource.
-* SameSite=Lax and SameSite=Strict cookies will no longer be sent in cross-scheme top-level POSTs.
-* SameSite=Strict cookies will no longer be sent in cross-scheme top-level navigations.
+* `SameSite=Lax` and `SameSite=Strict` cookies will no longer be sent in cross-scheme subresource requests, i.e. http-to-https and https-to-http (mixed content), regardless of HTTP request method.
+* `SameSite=Lax` and `SameSite=Strict` cookies can no longer be set by a cross-scheme subresource.
+* `SameSite=Lax` and `SameSite=Strict` cookies will no longer be sent in cross-scheme top-level POSTs.
+* `SameSite=Strict` cookies will no longer be sent in cross-scheme top-level navigations.
 
 ## Examples
 Below are two common use cases which will be changing.
 
 ### Top-level POST
 
-Cross-scheme top-level POSTS will no longer send SameSite=Lax cookies.
+Cross-scheme top-level POSTS will no longer send `SameSite=Lax` cookies.
 
-For example, a user writes up a forum post on http://messageboard.example. When the user clicks submit a POST request is sent to https://messageboard.example/submit, however the forum login cookie, which is marked with SameSite=Lax, will not be sent and the user’s post will fail.
+For example, a user writes up a forum post on http://messageboard.example. When the user clicks submit a POST request is sent to https://messageboard.example/submit, however the forum login cookie, which is marked with `SameSite=Lax`, will not be sent and the user’s post will fail.
 ### Subresources
 
-Requests to cross-scheme subresources will no longer send SameSite=Lax or SameSite=Strict cookies. Similarly, responses from cross-scheme subresources will no longer be able to set such cookies.
+Requests to cross-scheme subresources will no longer send `SameSite=Lax` or `SameSite=Strict` cookies. Similarly, responses from cross-scheme subresources will no longer be able to set such cookies.
 
-For example, if http://site.example embeds an image from https://site.example, SameSite=Lax and SameSite=Strict cookies will no longer be sent on the request to https://site.example, and any such cookies in the response will be ignored. 
+For example, if http://site.example embeds an image from https://site.example, `SameSite=Lax` and `SameSite=Strict` cookies will no longer be sent on the request to https://site.example, and any such cookies in the response will be ignored. 
 
 ## Questions
 ### How do Schemeful Same-Site and Scheme-Bound Cookies differ?
@@ -74,7 +88,7 @@ That cookie now can **only** be sent to secure URLs: https://site.example. This 
 
 “Scheme-Bound Cookies” affects the types of schemes the cookies will be sent to. "Does the scheme of the request URL match the scheme of the original, response, URL that set this cookie?"
 
-### Example
+#### Example
 This example showcases that it's possible to have a situation in which the cookies that "Schemeful Same-Site" and "Scheme-Bound Cookies" each send can differ.
 
 1. A user navigates to https://website.example which contains some embedded resources which want to set and read cookies.
@@ -83,7 +97,7 @@ This example showcases that it's possible to have a situation in which the cooki
 
 2. The user then navigates to http://website.example which is the same page as before, served over an insecure connection.
 
-3. The browser checks to see if it can send the cookie to http://website.example/readsacookie.jpg
+3. The browser checks to see if it can send the cookie on a request for http://website.example/readsacookie.jpg
 
    * In the current world (i.e. without either proposal) this cookie is allowed to be sent as the "same-site context" is same-site: only the registrable domain matters and they match.
 
@@ -91,7 +105,7 @@ This example showcases that it's possible to have a situation in which the cooki
 
    * “Scheme-Bound Cookies” would not allow this cookie to be sent as the scheme isn't the same as the one the cookie was set by: the cookie was set by https and is trying to be sent to http.
 
-4. Next the browser checks to see if it can send the cookie to https://website.example/readsacookie2.jpg
+4. The browser also checks to see if it can send the cookie on a request for https://website.example/readsacookie2.jpg
 
    * In the current world the cookie is allowed to be sent as the "same-site context" is same-site: the registrable domains match.
 
@@ -99,10 +113,15 @@ This example showcases that it's possible to have a situation in which the cooki
 
    * “Scheme-Bound Cookies” would allow this cookie to be sent as the scheme is the same as the one the cookie was set by: the cookie was set by https and is trying to be sent to https.
 
-5. Finally the user navigates to a different website, https://othersite.example, which embeddeds https://website.example/readsacookie2.jpg
+5. Finally the user navigates to a different website, https://othersite.example, which embeddeds https://website.example/readsacookie2.jpg; the browser checks to see if it can send the cookie on the request for that subresource
 
    * In the current world the cookie not allowed to be sent as the "same-site context" is cross-site: the registrable domains don't match
    
    * “Schemeful Same-Site” would not allow this cookie to be sent as the "same-site context" is cross-site: the registrable domains don't match.
    
-   * "Scheme-Bound Cookies" would allow this cookie to be sent as the scheme is the same as the one the cookie was set by: the cookie was set by https and is trying to be sent to https. (It's important to note that even if "Scheme-Bound Cookies" allows this cookie to be sent it will still ultimately be blocked by the browser due to same-site.)
+   * "Scheme-Bound Cookies" would allow this cookie to be sent as the scheme is the same as the one the cookie was set by: the cookie was set by https and is trying to be sent to https. (It's important to note that even if "Scheme-Bound Cookies" rules allow this cookie to be sent it will still be blocked by the browser due to the same-site rules.)
+
+### Is "Schemeful Same-Site" the same as "Schemeful SameSite"?
+Yes, while "Schemeful Same-Site" is the proposal's name, "Schemeful SameSite" is occasionally used.
+
+The name "Schemeful Same-Site" was chosen because "same-site" is the concept of being "the same site" and that concept is what is changing. We decided against using the spelling "SameSite" as it's the name of the cookie attribute which isn't changing. However we acknowedge that the difference is very subtle and that others may be more familiar/comfortable with "SameSite".
