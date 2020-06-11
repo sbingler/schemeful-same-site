@@ -13,16 +13,16 @@ The web ecosystem is already moving in this direction with the [HTML spec](https
 ### Example Attacks and Mitigations
 Below are two scenerios: the first one illustrates how the `SameSite` cookie attribute (specifically `Strict` in this example) can protect against CSRF, the second illustrates how "Schemeful Same-Site" enhances that protection.
 #### A Cross-Domain CSRF Attack
-An attacker sends you an email claiming you've won a sweepstakes. All you need to do if visit a website and click a button. You decide this feels legitimate and go visit the site https://mega-sweepstakes.example. The site has a big attractive button urging you to click it but, unbeknownst to you, the button doesn't claim your prize. Instead it links to your bank along with a query parameter telling your bank to transfer your money to the attacker's account: https://bank.example/transfer/custom?from=checking&to=evil-inc-slush-fund&amt=1000. 
+An attacker sends you an email claiming you've won a sweepstakes. All you need to do if visit a website and click a button. You decide this feels legitimate and go visit the site https://mega-sweepstakes.example. The site has a big attractive button urging you to click it but, unbeknownst to you, the button doesn't claim your prize. Instead it links to your bank along with a query parameter telling your bank to transfer your money to the attacker's account: https://bank.example/transfer/custom?from=checking&to=evil-inc-slush-fund&amt=1000. Oh, and you recently logged into your bank account so your login cookie is still valid.
 
 If your bank's cookies don't have the `SameSite=Strict` attribute then clicking that link will cause your browser to navigate to your bank's site, send along your login cookies, and cause you to be $1000 poorer.
 
 If your bank's cookies **do** have the `SameSite=Strict` attribute then clicking that link will **not** cause your browser to send along your login cookies, because mega-sweepstakes.example isn't the same site as bank.example, and your checking account is safe.
 
 #### A Same-Domain CSRF Attack
-But what if the attacker is Man-in-the-middling your connection? If you decide to visit http://bank.example the attacker could modify every link to instead be https://bank.example/transfer/custom?from=checking&to=evil-inc-slush-fund&amt=1000. Even `SameSite=Strict` wouldn't protect you as bank.example and bank.example are same-site.
+But what if the attacker is Man-in-the-middling your connection? If you decide to visit http://bank.example the attacker could modify every link on the page to point to https://bank.example/transfer/custom?from=checking&to=evil-inc-slush-fund&amt=1000. Even `SameSite=Strict` wouldn't protect you as bank.example and bank.example are same-site.
 
-Enter "Schemeful Same-Site", by considering both the scheme and the registrable domain we can see that http://bank.example and https://bank.example are not the same and hence are not same-site. This means that the browser will not send `SameSite=Strict` cookies.
+Enter "Schemeful Same-Site", by considering both the scheme and the registrable domain we can see that http://bank.example and https://bank.example are not the same and hence are not same-site. This means that the browser will not send `SameSite=Strict` cookies, you will therefore not be logged in, and the transfer attempt will fail.
 
 ## Proposal
 Modify same-site's implementation in the user agent to consider origins with different schemes as cross-site. Thus https://site.example and http://site.example would now be considered cross-site.
@@ -48,7 +48,7 @@ Affected sites are encouraged to fully migrate to HTTPS.
 * `SameSite=Lax` and `SameSite=Strict` cookies will no longer be sent in cross-scheme top-level POSTs.
 * `SameSite=Strict` cookies will no longer be sent in cross-scheme top-level navigations.
 
-## Examples
+## Examples of Changed Behavior
 Below are two common use cases which will be changing.
 
 ### Top-level POST
@@ -88,7 +88,7 @@ That cookie now can **only** be sent to secure URLs: https://site.example. This 
 
 “Scheme-Bound Cookies” affects the types of schemes the cookies will be sent to. "Does the scheme of the request URL match the scheme of the original, response, URL that set this cookie?"
 
-#### Example
+#### Example of Differences
 This example showcases that it's possible to have a situation in which the cookies that "Schemeful Same-Site" and "Scheme-Bound Cookies" each send can differ.
 
 1. A user navigates to https://website.example which contains some embedded resources which want to set and read cookies.
@@ -122,6 +122,4 @@ This example showcases that it's possible to have a situation in which the cooki
    * "Scheme-Bound Cookies" would allow this cookie to be sent as the scheme is the same as the one the cookie was set by: the cookie was set by https and is trying to be sent to https. (It's important to note that even if "Scheme-Bound Cookies" rules allow this cookie to be sent it will still be blocked by the browser due to the same-site rules.)
 
 ### Is "Schemeful Same-Site" the same as "Schemeful SameSite"?
-Yes, while "Schemeful Same-Site" is the proposal's name, "Schemeful SameSite" is occasionally used.
-
-The name "Schemeful Same-Site" was chosen because "same-site" is the concept of being "the same site" and that concept is what is changing. We decided against using the spelling "SameSite" as it's the name of the cookie attribute which isn't changing. However we acknowedge that the difference is very subtle and that others may be more familiar/comfortable with "SameSite".
+Yes. While "Schemeful Same-Site" is the proposal's name, "Schemeful SameSite" is occasionally used. We encourage the "Schemeful Same-Site" spelling.
