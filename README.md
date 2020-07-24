@@ -63,6 +63,45 @@ Requests to cross-scheme subresources will no longer send `SameSite=Lax` or `Sam
 For example, if http://site.example embeds an image from https://site.example, `SameSite=Lax` and `SameSite=Strict` cookies will no longer be sent on the request to https://site.example, and any such cookies in the response will be ignored. 
 
 ## Questions
+### How does this affect iframes?
+#### The src attribute
+A request to get the content specified by the `src` attribute is treated as any other subresource request and is affected the same ways.
+Once the content is loaded it runs as cross-site or same-site depending on if the `src` value was cross-scheme or not, respectively.
+
+For example, the following request for a page will not be sent `SameSite=Lax` nor `SameSite=Strict` cookies (nor will its response be able to set those cookies) as it's cross-scheme. After the page is loaded nothing on the page is able to access those `SameSite` cookies because it's being run as cross-site.
+```
+<html>
+<body>
+
+<h1>This page is hosted at https://website.example/secure.html</h1>
+<iframe src="http://website.example/insecure.html" title="An iframe to an insecure page"></iframe>
+
+</body>
+</html>
+```
+#### The srcodc attribute
+Content that is loaded into an iframe through the `srcdoc` attribute inherits its parent's origin. Therefore it has the same "Schemeful Same-Site" restrictions (or lack thereof) as its parent document.
+
+### How does this affect scripts?
+Scripts run as part of their parent document, therefore they have the same "Schemeful Same-Site" restrictions (or lack thereof) as their parent document.
+
+This could affect websites that load scripts into a cross-scheme iframe. Such a script would be run as cross-site, due to the cross-scheme iframe, and would not have access to `SameSite=Lax` nor `SameSite=Strict` cookies.
+
+#### The src attribute
+A request to get the script via the `src` attribute is treated as any other subresource request and is affected the same ways.
+
+For example, the following request for a script will not be sent `SameSite=Lax` nor `SameSite=Strict` cookies (nor will its response be able to set those cookies) but the script itself is able to access those `SameSite` cookies when it executes.
+```
+<html>
+<body>
+
+<h1>This page is hosted at https://website.example/secure.html</h1>
+<script src="http://website.example/script-that-accesses-samesite-cookies.js"></script>
+
+</body>
+</html>
+```
+
 ### How do Schemeful Same-Site and Scheme-Bound Cookies differ?
 
 "Schemeful Same-Site" and "[Scheme-Bound Cookies](https://github.com/mikewest/scheming-cookies)" are both trying to move cookies closer to an origin-based security model; these two proposals complement one another and one is not a subset of the other.
