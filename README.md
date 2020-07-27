@@ -64,44 +64,67 @@ For example, if http://site.example embeds an image from https://site.example, `
 
 ## Questions
 ### How does this affect iframes?
+Prior to "Schemeful Same-Site": if there are multiple nested iframes a given iframe is always cross-site, to the top-level frame, if any of its ancestors are cross-site, to the top-level frame.\
+With "Schemeful Same-Site": This can now occur if any ancestor iframe is cross-scheme, to the top-level frame.
+
+Any iframe using the `sandbox` attribute is always cross-site, to the top-level frame. Nothing here has changed.
 #### The src attribute
 A request to get the content specified by the `src` attribute is treated as any other subresource request and is affected the same ways.
-Once the content is loaded it runs as cross-site or same-site depending on if the `src` value was cross-scheme or not, respectively.
+Once the iframe's content is loaded, it runs as cross-site or same-site depending the origin of the resulting document (this is typically the origin of the value of the `src` attribute).
 
-For example, the following request for a page will not be sent `SameSite=Lax` nor `SameSite=Strict` cookies (nor will its response be able to set those cookies) as it's cross-scheme. After the page is loaded nothing on the page is able to access those `SameSite` cookies because it's being run as cross-site.
+For example, the following request for the iframe's page will not be sent `SameSite=Lax` nor `SameSite=Strict` cookies (nor will its response be able to set those cookies) as it's cross-scheme. After the iframe's page is loaded, nothing on it is able to access those `SameSite` cookies because it's being run as cross-site.
+
 ```
 <html>
 <body>
 
-<h1>This page is hosted at https://website.example/secure.html</h1>
-<iframe src="http://website.example/insecure.html" title="An iframe to an insecure page"></iframe>
+<h1>This page is hosted at http://website.example/insecure.html</h1>
+<iframe src="https://website.example/secure.html" title="An iframe to a secure page"></iframe>
 
 </body>
 </html>
 ```
-#### The srcodc attribute
+#### The srcdoc attribute
 Content that is loaded into an iframe through the `srcdoc` attribute inherits its parent's origin. Therefore it has the same "Schemeful Same-Site" restrictions (or lack thereof) as its parent document.
 
 ### How does this affect scripts?
-Scripts run as part of their parent document, therefore they have the same "Schemeful Same-Site" restrictions (or lack thereof) as their parent document.
-
-This could affect websites that load scripts into a cross-scheme iframe. Such a script would be run as cross-site, due to the cross-scheme iframe, and would not have access to `SameSite=Lax` nor `SameSite=Strict` cookies.
-
-#### The src attribute
+#### Fetching scripts
 A request to get the script via the `src` attribute is treated as any other subresource request and is affected the same ways.
 
-For example, the following request for a script will not be sent `SameSite=Lax` nor `SameSite=Strict` cookies (nor will its response be able to set those cookies) but the script itself is able to access those `SameSite` cookies when it executes.
+For example, the following request for a script will not be sent `SameSite=Lax` nor `SameSite=Strict` cookies (nor will its response be able to set those cookies).
 ```
 <html>
 <body>
 
-<h1>This page is hosted at https://website.example/secure.html</h1>
-<script src="http://website.example/script-that-accesses-samesite-cookies.js"></script>
+<h1>This page is hosted at http://website.example/insecure.html</h1>
+<script src="https://website.example/script-that-accesses-samesite-cookies.js"></script>
 
 </body>
 </html>
 ```
+#### Executing scripts
+Scripts execute as part of their parent document, therefore they have the same "Schemeful Same-Site" restrictions (or lack thereof) as their parent document.
 
+This could affect websites that load scripts into a cross-scheme iframe. Such a script would be run as cross-site, due to the cross-scheme iframe, and would not have access to `SameSite=Lax` nor `SameSite=Strict` cookies.
+
+For example, both of the following `<script>`s will be able to access `SameSite=Lax` and `SameSite=Strict` cookies. However, the script embedded in the iframe page will not be able to as the iframe is cross-site.
+```
+<html>
+<body>
+
+<h1>This page is hosted at http://website.example/insecure.html</h1>
+<script>
+// This script uses document.cookie to do things.
+...
+</script>
+
+<script src="https://website.example/script-that-accesses-samesite-cookies.js"></script>
+
+<iframe src="https://website.example/iframe-with-js.html" title="An iframe that embeds a script"></iframe>
+
+</body>
+</html>
+```
 ### How do Schemeful Same-Site and Scheme-Bound Cookies differ?
 
 "Schemeful Same-Site" and "[Scheme-Bound Cookies](https://github.com/mikewest/scheming-cookies)" are both trying to move cookies closer to an origin-based security model; these two proposals complement one another and one is not a subset of the other.
