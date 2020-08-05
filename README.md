@@ -64,10 +64,10 @@ For example, if http://site.example embeds an image from https://site.example, `
 
 ## Questions
 ### How does this affect iframes?
-Prior to "Schemeful Same-Site": if there are multiple nested iframes a given iframe is always cross-site, to the top-level frame, if any of its ancestors are cross-site, to the top-level frame.\
-With "Schemeful Same-Site": This can now occur if any ancestor iframe is cross-scheme, to the top-level frame.
+Prior to "Schemeful Same-Site": if there are multiple nested iframes a given iframe is always cross-site (to the top-level frame) if any of its ancestors are cross-site (to the top-level frame).
+With "Schemeful Same-Site": This can now occur if any ancestor iframe is cross-scheme (to the top-level frame).
 
-Any iframe using the `sandbox` attribute is always cross-site, to the top-level frame. Nothing here has changed.
+Any iframe using the `sandbox` attribute is always cross-site (to the top-level frame). Nothing here has changed.
 #### The src attribute
 A request to get the content specified by the `src` attribute is treated as any other subresource request and is affected the same ways.
 Once the iframe's content is loaded, it runs as cross-site or same-site depending the origin of the resulting document (this is typically the origin of the value of the `src` attribute).
