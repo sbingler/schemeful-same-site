@@ -64,7 +64,7 @@ For example, if http://site.example embeds an image from https://site.example, `
 
 ## Questions
 ### How does this affect iframes?
-Prior to "Schemeful Same-Site": if there are multiple nested iframes a given iframe is always cross-site (to the top-level frame) if any of its ancestors are cross-site (to the top-level frame).
+Prior to "Schemeful Same-Site": if there are multiple nested iframes a given iframe is always cross-site (to the top-level frame) if any of its ancestors are cross-site (to the top-level frame).\
 With "Schemeful Same-Site": This can now occur if any ancestor iframe is cross-scheme (to the top-level frame).
 
 Any iframe using the `sandbox` attribute is always cross-site (to the top-level frame). Nothing here has changed.
